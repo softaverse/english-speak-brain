@@ -51,7 +51,7 @@ export default function PracticePage() {
 
       // Step 2: Add user message to chat
       const userMessage: ConversationMessage = {
-        id: `user-${Date.now()}`,
+        id: `user-${crypto.randomUUID()}`,
         role: 'user',
         content: transcribedText,
         audioBlob: audioBlob,
@@ -68,7 +68,7 @@ export default function PracticePage() {
 
       // Step 3: Add loading message for AI response
       const loadingMessage: ConversationMessage = {
-        id: `assistant-${Date.now()}`,
+        id: `assistant-${crypto.randomUUID()}`,
         role: 'assistant',
         content: '',
         timestamp: new Date(),
