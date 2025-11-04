@@ -129,3 +129,101 @@ export async function transcribeAudioWithTimestamps(
 export async function getSupportedAudioFormats(): Promise<ApiResponse<AudioFormatsResponse>> {
   return apiClient.get('/practice/transcribe/formats');
 }
+
+/**
+ * Message role types
+ */
+export type MessageRole = 'system' | 'user' | 'assistant';
+
+/**
+ * Chat message interface
+ */
+export interface ChatMessage {
+  role: MessageRole;
+  content: string;
+}
+
+/**
+ * Text generation options for Responses API
+ */
+export interface TextGenerationOptions {
+  temperature?: number;
+  maxOutputTokens?: number;
+  instructions?: string;
+  previousResponseId?: string;
+  store?: boolean;
+  tools?: Array<any>;
+  toolChoice?: string | object;
+  parallelToolCalls?: boolean;
+  safetyIdentifier?: string;
+  metadata?: Record<string, string>;
+  include?: Array<string>;
+}
+
+/**
+ * Text generation response from Responses API
+ */
+export interface TextGenerationResponse {
+  text: string;
+  model: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    cachedTokens?: number;
+    reasoningTokens?: number;
+  };
+  status: string;
+  id: string;
+  createdAt: number;
+  output: Array<any>;
+}
+
+/**
+ * Generate conversation response using OpenAI Responses API
+ * POST /api/practice/generate/conversation
+ *
+ * @param message - The user's message
+ * @param history - Previous messages in the conversation (optional)
+ * @param options - Optional generation settings
+ * @returns AI-generated conversation response
+ *
+ * @example
+ * ```typescript
+ * const response = await generateConversation(
+ *   "Hello, how are you?",
+ *   [
+ *     { role: 'user', content: 'Hi there!' },
+ *     { role: 'assistant', content: 'Hello! How can I help you?' }
+ *   ],
+ *   { temperature: 0.8, maxOutputTokens: 300 }
+ * );
+ * ```
+ */
+export async function generateConversation(
+  message: string,
+  history?: ChatMessage[],
+  options?: TextGenerationOptions
+): Promise<ApiResponse<TextGenerationResponse>> {
+  return apiClient.post('/practice/generate/conversation', {
+    message,
+    history: history || [],
+    options,
+  });
+}
+
+/**
+ * Analyze English text for errors and improvements
+ * POST /api/practice/generate/analyze
+ *
+ * @param text - The text to analyze
+ * @param options - Optional generation settings
+ * @returns AI analysis with feedback
+ */
+export async function analyzeText(
+  text: string,
+  options?: TextGenerationOptions
+): Promise<ApiResponse<TextGenerationResponse>> {
+  return apiClient.post('/practice/generate/analyze', { text, options });
+}
+

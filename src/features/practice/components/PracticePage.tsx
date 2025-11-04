@@ -2,26 +2,20 @@
 
 import { useState } from 'react';
 import VoiceRecorder from './VoiceRecorder';
-import AnalysisFeedback from './AnalysisFeedback';
-import { uploadAudioForAnalysis, transcribeAudio } from '@/lib/api';
-import type { SentenceAnalysis, TranscriptionResponse } from '@/types';
+import { transcribeAudio, generateConversation } from '@/lib/api';
+import type { TranscriptionResponse } from '@/types';
 import { Loader2, FileAudio } from 'lucide-react';
-
-// Mock user ID - in production, this would come from auth context
-const MOCK_USER_ID = 'user-123';
 
 export default function PracticePage() {
   const [transcription, setTranscription] = useState<TranscriptionResponse | null>(null);
-  const [analysis, setAnalysis] = useState<SentenceAnalysis | null>(null);
+  const [textAnalysis, setTextAnalysis] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalyzingText, setIsAnalyzingText] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentAudioBlob, setCurrentAudioBlob] = useState<Blob | null>(null);
 
   const handleTranscriptionRequest = async (audioBlob: Blob) => {
     setIsTranscribing(true);
     setError(null);
-    setCurrentAudioBlob(audioBlob);
 
     try {
       const response = await transcribeAudio(audioBlob, {
@@ -49,38 +43,45 @@ export default function PracticePage() {
     }
   };
 
-  const handleAnalysisRequest = async () => {
-    if (!currentAudioBlob) {
-      setError('No audio recording available.');
+  const handleTextAnalysisRequest = async () => {
+    if (!transcription?.text) {
+      setError('No transcription text available to analyze.');
       return;
     }
 
-    setIsAnalyzing(true);
+    setIsAnalyzingText(true);
     setError(null);
 
     try {
-      const response = await uploadAudioForAnalysis(currentAudioBlob, MOCK_USER_ID);
+      // Using generateConversation API instead of analyzeText (no history - stateless)
+      const response = await generateConversation(
+        transcription.text,
+        [], // Empty history for now to test the API difference
+        {
+          temperature: 0.8,
+          maxOutputTokens: 300,
+        }
+      );
 
       if (response.success && response.data) {
-        setAnalysis(response.data.analysis);
+        setTextAnalysis(response.data.text);
       } else {
         setError(
-          response.error?.message || 'Failed to analyze audio. Please try again.'
+          response.error?.message || 'Failed to analyze text. Please try again.'
         );
       }
     } catch (err) {
-      setError('An unexpected error occurred during analysis. Please try again.');
-      console.error('Analysis error:', err);
+      setError('An unexpected error occurred during text analysis. Please try again.');
+      console.error('Text analysis error:', err);
     } finally {
-      setIsAnalyzing(false);
+      setIsAnalyzingText(false);
     }
   };
 
   const handleNewRecording = () => {
     setTranscription(null);
-    setAnalysis(null);
+    setTextAnalysis(null);
     setError(null);
-    setCurrentAudioBlob(null);
   };
 
   return (
@@ -97,9 +98,9 @@ export default function PracticePage() {
       <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-xs font-mono">
         <div className="font-semibold mb-2">Debug Info:</div>
         <div>Has transcription: {transcription ? 'Yes' : 'No'}</div>
-        <div>Has analysis: {analysis ? 'Yes' : 'No'}</div>
+        <div>Has text analysis: {textAnalysis ? 'Yes' : 'No'}</div>
         <div>Is transcribing: {isTranscribing ? 'Yes' : 'No'}</div>
-        <div>Is analyzing: {isAnalyzing ? 'Yes' : 'No'}</div>
+        <div>Is analyzing text: {isAnalyzingText ? 'Yes' : 'No'}</div>
         {transcription && (
           <div className="mt-2">
             <div>Transcription text length: {transcription.text?.length || 0}</div>
@@ -109,7 +110,7 @@ export default function PracticePage() {
       </div>
 
       {/* Voice Recorder */}
-      {!transcription && !analysis && (
+      {!transcription && !textAnalysis && (
         <VoiceRecorder
           onAnalysisRequest={handleTranscriptionRequest}
           autoSubmit={true}
@@ -127,13 +128,13 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* Analyzing State */}
-      {isAnalyzing && (
+      {/* Analyzing Text State */}
+      {isAnalyzingText && (
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary-600" />
-          <p className="text-lg font-medium text-gray-700">Analyzing your speech...</p>
+          <p className="text-lg font-medium text-gray-700">Analyzing your text...</p>
           <p className="mt-1 text-sm text-gray-500">
-            This may take a few seconds
+            Getting AI feedback on your writing
           </p>
         </div>
       )}
@@ -153,7 +154,7 @@ export default function PracticePage() {
       )}
 
       {/* Transcription Results */}
-      {transcription && !analysis && !isTranscribing && !isAnalyzing && (
+      {transcription && !textAnalysis && !isTranscribing && !isAnalyzingText && (
         <div className="space-y-6">
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-2">
@@ -175,12 +176,13 @@ export default function PracticePage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button
-              onClick={handleAnalysisRequest}
-              className="rounded-lg bg-primary-600 px-6 py-3 font-medium text-white hover:bg-primary-700 transition-colors"
+              onClick={handleTextAnalysisRequest}
+              disabled={isAnalyzingText}
+              className="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Analyze Speech Quality
+              Get AI Feedback
             </button>
             <button
               onClick={handleNewRecording}
@@ -192,15 +194,15 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* Analysis Results */}
-      {analysis && !isAnalyzing && (
+      {/* Text Analysis Results */}
+      {textAnalysis && !isAnalyzingText && (
         <>
-          {/* Show transcription before analysis */}
+          {/* Show transcription before feedback */}
           {transcription && (
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
                 <FileAudio className="h-5 w-5 text-primary-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Your Speech</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Your Text</h2>
               </div>
 
               <div className="rounded-md bg-gray-50 p-4">
@@ -211,7 +213,15 @@ export default function PracticePage() {
             </div>
           )}
 
-          <AnalysisFeedback analysis={analysis} />
+          {/* AI Feedback */}
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">AI Feedback</h2>
+            <div className="prose prose-gray max-w-none">
+              <div className="whitespace-pre-wrap text-gray-700">
+                {textAnalysis}
+              </div>
+            </div>
+          </div>
 
           {/* New Recording Button */}
           <div className="text-center">
