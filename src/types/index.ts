@@ -220,3 +220,17 @@ export interface AudioFormatsResponse {
   maxFileSize: number;
   maxFileSizeMB: number;
 }
+
+// ============ Conversation Types ============
+
+export type ConversationRole = 'user' | 'assistant';
+
+export interface ConversationMessage {
+  id: string;
+  role: ConversationRole;
+  content: string;
+  audioBlob?: Blob;
+  audioUrl?: string;
+  timestamp: Date;
+  isLoading?: boolean;
+}
