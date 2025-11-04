@@ -2,238 +2,188 @@
 
 import { useState } from 'react';
 import VoiceRecorder from './VoiceRecorder';
+import ChatMessageList from './ChatMessageList';
 import { transcribeAudio, generateConversation } from '@/lib/api';
-import type { TranscriptionResponse } from '@/types';
-import { Loader2, FileAudio } from 'lucide-react';
+import type { ConversationMessage } from '@/types';
+import type { ChatMessage } from '@/lib/api/practice';
+
+// Initial welcome message from AI teacher
+const INITIAL_MESSAGE: ConversationMessage = {
+  id: 'welcome-msg',
+  role: 'assistant',
+  content: `Hi! I'm your AI English teacher. Let's practice speaking together!
+
+I'm here to help you improve your English in a friendly and supportive way. Just click the record button below and start speaking - I'll listen, provide feedback, and have a natural conversation with you.
+
+Feel free to talk about anything you'd like to practice. Ready when you are!`,
+  timestamp: new Date(),
+};
 
 export default function PracticePage() {
-  const [transcription, setTranscription] = useState<TranscriptionResponse | null>(null);
-  const [textAnalysis, setTextAnalysis] = useState<string | null>(null);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isAnalyzingText, setIsAnalyzingText] = useState(false);
+  const [messages, setMessages] = useState<ConversationMessage[]>([INITIAL_MESSAGE]);
+  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([
+    { role: 'assistant', content: INITIAL_MESSAGE.content },
+  ]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleTranscriptionRequest = async (audioBlob: Blob) => {
-    setIsTranscribing(true);
+  const handleRecordingComplete = async (audioBlob: Blob) => {
+    console.log('🎤 Recording complete, starting processing...');
+    setIsProcessing(true);
     setError(null);
 
     try {
-      const response = await transcribeAudio(audioBlob, {
+      // Step 1: Transcribe audio to text
+      console.log('📝 Step 1: Transcribing audio...');
+      const transcriptionResponse = await transcribeAudio(audioBlob, {
         language: 'en',
         temperature: 0.2,
       });
 
-      console.log('Transcription response:', response);
-
-      if (response.success && response.data) {
-        console.log('Setting transcription data:', response.data);
-        console.log('Has text property:', 'text' in response.data);
-        console.log('Text value:', response.data.text);
-        setTranscription(response.data);
-      } else {
-        setError(
-          response.error?.message || 'Failed to transcribe audio. Please try again.'
+      if (!transcriptionResponse.success || !transcriptionResponse.data?.text) {
+        throw new Error(
+          transcriptionResponse.error?.message || 'Failed to transcribe audio'
         );
       }
-    } catch (err) {
-      setError('An unexpected error occurred during transcription. Please try again.');
-      console.error('Transcription error:', err);
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
 
-  const handleTextAnalysisRequest = async () => {
-    if (!transcription?.text) {
-      setError('No transcription text available to analyze.');
-      return;
-    }
+      const transcribedText = transcriptionResponse.data.text;
+      console.log('✅ Transcription successful:', transcribedText);
 
-    setIsAnalyzingText(true);
-    setError(null);
+      // Step 2: Add user message to chat
+      const userMessage: ConversationMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: transcribedText,
+        audioBlob: audioBlob,
+        timestamp: new Date(),
+      };
 
-    try {
-      // Using generateConversation API instead of analyzeText (no history - stateless)
-      const response = await generateConversation(
-        transcription.text,
-        [], // Empty history for now to test the API difference
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Update conversation history for API
+      const updatedHistory: ChatMessage[] = [
+        ...conversationHistory,
+        { role: 'user', content: transcribedText },
+      ];
+
+      // Step 3: Add loading message for AI response
+      const loadingMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isLoading: true,
+      };
+
+      setMessages((prev) => [...prev, loadingMessage]);
+
+      // Step 4: Get AI feedback
+      console.log('🤖 Step 2: Getting AI feedback...');
+      const aiResponse = await generateConversation(
+        transcribedText,
+        conversationHistory,
         {
           temperature: 0.8,
-          maxOutputTokens: 300,
+          maxOutputTokens: 500,
+          instructions: `You are a friendly and supportive English teacher. Your role is to:
+1. Engage in natural conversation with the student
+2. Provide gentle corrections when you notice errors in grammar, vocabulary, or sentence structure
+3. Give encouraging feedback and praise improvements
+4. Ask follow-up questions to keep the conversation flowing
+5. Balance between being a conversational partner and an educational guide
+
+Keep your responses concise (2-4 sentences) and conversational. Don't be overly formal or list-like unless the student specifically asks for detailed analysis.`,
         }
       );
 
-      if (response.success && response.data) {
-        setTextAnalysis(response.data.text);
-      } else {
-        setError(
-          response.error?.message || 'Failed to analyze text. Please try again.'
-        );
+      if (!aiResponse.success || !aiResponse.data?.text) {
+        throw new Error(aiResponse.error?.message || 'Failed to get AI response');
       }
+
+      console.log('✅ AI response received:', aiResponse.data.text);
+
+      // Step 5: Replace loading message with actual response
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === loadingMessage.id
+            ? {
+                ...msg,
+                content: aiResponse.data!.text,
+                isLoading: false,
+                timestamp: new Date(),
+              }
+            : msg
+        )
+      );
+
+      // Update conversation history
+      setConversationHistory([
+        ...updatedHistory,
+        { role: 'assistant', content: aiResponse.data.text },
+      ]);
+
+      console.log('✅ Conversation updated successfully');
     } catch (err) {
-      setError('An unexpected error occurred during text analysis. Please try again.');
-      console.error('Text analysis error:', err);
+      console.error('❌ Error during processing:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred. Please try again.'
+      );
+
+      // Remove loading message if there was an error
+      setMessages((prev) => prev.filter((msg) => !msg.isLoading));
     } finally {
-      setIsAnalyzingText(false);
+      setIsProcessing(false);
     }
   };
 
-  const handleNewRecording = () => {
-    setTranscription(null);
-    setTextAnalysis(null);
-    setError(null);
-  };
-
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-4xl h-full flex flex-col">
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center py-6">
         <h1 className="text-3xl font-bold text-gray-900">Practice Speaking</h1>
         <p className="mt-2 text-gray-600">
-          Record yourself speaking English and get instant AI-powered feedback
+          Have a conversation with your AI teacher and improve your English
         </p>
       </div>
 
       {/* Debug Info */}
-      <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-xs font-mono">
+      <div className="mx-4 mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-xs font-mono">
         <div className="font-semibold mb-2">Debug Info:</div>
-        <div>Has transcription: {transcription ? 'Yes' : 'No'}</div>
-        <div>Has text analysis: {textAnalysis ? 'Yes' : 'No'}</div>
-        <div>Is transcribing: {isTranscribing ? 'Yes' : 'No'}</div>
-        <div>Is analyzing text: {isAnalyzingText ? 'Yes' : 'No'}</div>
-        {transcription && (
-          <div className="mt-2">
-            <div>Transcription text length: {transcription.text?.length || 0}</div>
-            <div>Transcription preview: {transcription.text?.substring(0, 50) || 'N/A'}</div>
-          </div>
-        )}
+        <div>Total messages: {messages.length}</div>
+        <div>Conversation history length: {conversationHistory.length}</div>
+        <div>Is processing: {isProcessing ? 'Yes' : 'No'}</div>
+        <div>Has error: {error ? 'Yes' : 'No'}</div>
+        {error && <div className="text-red-600 mt-1">Error: {error}</div>}
       </div>
-
-      {/* Voice Recorder */}
-      {!transcription && !textAnalysis && (
-        <VoiceRecorder
-          onAnalysisRequest={handleTranscriptionRequest}
-          autoSubmit={true}
-        />
-      )}
-
-      {/* Transcribing State */}
-      {isTranscribing && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary-600" />
-          <p className="text-lg font-medium text-gray-700">Transcribing your speech...</p>
-          <p className="mt-1 text-sm text-gray-500">
-            Converting audio to text using AI
-          </p>
-        </div>
-      )}
-
-      {/* Analyzing Text State */}
-      {isAnalyzingText && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary-600" />
-          <p className="text-lg font-medium text-gray-700">Analyzing your text...</p>
-          <p className="mt-1 text-sm text-gray-500">
-            Getting AI feedback on your writing
-          </p>
-        </div>
-      )}
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg bg-error-50 p-4 text-center">
+        <div className="mx-4 mb-4 rounded-lg bg-error-50 border border-error-200 p-4">
           <p className="font-medium text-error-900">Error</p>
           <p className="mt-1 text-sm text-error-700">{error}</p>
           <button
-            onClick={handleNewRecording}
-            className="mt-3 text-sm font-medium text-error-700 underline hover:text-error-800"
+            onClick={() => setError(null)}
+            className="mt-2 text-sm font-medium text-error-700 underline hover:text-error-800"
           >
-            Try Again
+            Dismiss
           </button>
         </div>
       )}
 
-      {/* Transcription Results */}
-      {transcription && !textAnalysis && !isTranscribing && !isAnalyzingText && (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <FileAudio className="h-5 w-5 text-primary-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Transcription</h2>
-            </div>
+      {/* Chat Messages */}
+      <div className="flex-1 border border-gray-200 rounded-lg bg-white shadow-sm mx-4 overflow-hidden">
+        <ChatMessageList messages={messages} />
+      </div>
 
-            <div className="rounded-md bg-gray-50 p-4">
-              <p className="text-gray-800 leading-relaxed">
-                {transcription.text}
-              </p>
-            </div>
-
-            {transcription.language && (
-              <p className="mt-3 text-sm text-gray-500">
-                Language: <span className="font-medium">{transcription.language}</span>
-              </p>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button
-              onClick={handleTextAnalysisRequest}
-              disabled={isAnalyzingText}
-              className="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Get AI Feedback
-            </button>
-            <button
-              onClick={handleNewRecording}
-              className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              New Recording
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Text Analysis Results */}
-      {textAnalysis && !isAnalyzingText && (
-        <>
-          {/* Show transcription before feedback */}
-          {transcription && (
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center gap-2">
-                <FileAudio className="h-5 w-5 text-primary-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Your Text</h2>
-              </div>
-
-              <div className="rounded-md bg-gray-50 p-4">
-                <p className="text-gray-800 leading-relaxed">
-                  {transcription.text}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* AI Feedback */}
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">AI Feedback</h2>
-            <div className="prose prose-gray max-w-none">
-              <div className="whitespace-pre-wrap text-gray-700">
-                {textAnalysis}
-              </div>
-            </div>
-          </div>
-
-          {/* New Recording Button */}
-          <div className="text-center">
-            <button
-              onClick={handleNewRecording}
-              className="text-primary-600 hover:text-primary-700 font-medium underline"
-            >
-              Start a New Recording
-            </button>
-          </div>
-        </>
-      )}
+      {/* Voice Recorder - Fixed at bottom */}
+      <div className="mt-4 mb-6 mx-4">
+        <VoiceRecorder
+          onAnalysisRequest={handleRecordingComplete}
+          autoSubmit={true}
+        />
+      </div>
     </div>
   );
 }
