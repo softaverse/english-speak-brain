@@ -31,6 +31,7 @@ export default function VoiceRecorder({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -39,6 +40,7 @@ export default function VoiceRecorder({
   const handleStartClick = async () => {
     console.log('🎤 Start button clicked!');
     setHasAutoSubmitted(false); // Reset auto-submit flag
+    setAnalysisError(null); // Clear any previous analysis errors
     try {
       await startRecording();
       console.log('✅ Recording started successfully');
@@ -66,6 +68,7 @@ export default function VoiceRecorder({
     }
 
     console.log('📤 Submitting recording, blob size:', recordingState.audioBlob.size);
+    setAnalysisError(null); // Clear any previous errors
 
     if (onRecordingComplete) {
       onRecordingComplete(recordingState.audioBlob, recordingState.duration);
@@ -76,13 +79,17 @@ export default function VoiceRecorder({
       try {
         await onAnalysisRequest(recordingState.audioBlob);
         console.log('✅ Analysis complete, resetting to initial state');
-        // Reset to initial state after successful submission
-        setHasAutoSubmitted(false);
-        resetRecording();
       } catch (err) {
-        console.error('Analysis failed:', err);
+        console.error('❌ Analysis failed:', err);
+        // Set user-friendly error message
+        const errorMessage = err instanceof Error ? err.message : '分析失敗，請重試';
+        setAnalysisError(errorMessage);
       } finally {
         setIsAnalyzing(false);
+        // Reset to initial state after submission attempt (success or failure)
+        // This ensures the user can always attempt another recording
+        setHasAutoSubmitted(false);
+        resetRecording();
       }
     }
   }, [recordingState.audioBlob, recordingState.duration, onRecordingComplete, onAnalysisRequest, resetRecording]);
@@ -200,11 +207,24 @@ export default function VoiceRecorder({
           )}
         </div>
 
-        {/* Error Message */}
+        {/* Error Messages */}
         {error && (
           <div className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
-            <p className="font-semibold text-red-900">Error:</p>
+            <p className="font-semibold text-red-900">錄音錯誤：</p>
             <p className="mt-1 text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        {analysisError && (
+          <div className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
+            <p className="font-semibold text-red-900">分析錯誤：</p>
+            <p className="mt-1 text-sm text-red-700">{analysisError}</p>
+            <button
+              onClick={() => setAnalysisError(null)}
+              className="mt-2 text-sm font-medium text-red-700 underline hover:text-red-800"
+            >
+              關閉
+            </button>
           </div>
         )}
 
