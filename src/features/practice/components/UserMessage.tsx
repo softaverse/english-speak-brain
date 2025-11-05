@@ -23,6 +23,10 @@ export default function UserMessage({ message }: UserMessageProps) {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        // Detach event listeners to prevent memory leaks and state updates on unmounted components
+        audioRef.current.onplay = null;
+        audioRef.current.onended = null;
+        audioRef.current.onpause = null;
         audioRef.current = null;
       }
       if (audioUrlRef.current) {
