@@ -11,11 +11,7 @@ import type { ChatMessage } from '@/lib/api/practice';
 const INITIAL_MESSAGE: ConversationMessage = {
   id: 'welcome-msg',
   role: 'assistant',
-  content: `Hi! I'm your AI English teacher. Let's practice speaking together!
-
-I'm here to help you improve your English in a friendly and supportive way. Just click the record button below and start speaking - I'll listen, provide feedback, and have a natural conversation with you.
-
-Feel free to talk about anything you'd like to practice. Ready when you are!`,
+  content: `Hello, thanks for coming in today. Let's start with a simple question. Can you describe yourself in three words?`,
   timestamp: new Date(),
 };
 
@@ -28,13 +24,11 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
-    console.log('🎤 Recording complete, starting processing...');
     setIsProcessing(true);
     setError(null);
 
     try {
       // Step 1: Transcribe audio to text
-      console.log('📝 Step 1: Transcribing audio...');
       const transcriptionResponse = await transcribeAudio(audioBlob, {
         language: 'en',
         temperature: 0.2,
@@ -47,7 +41,6 @@ export default function PracticePage() {
       }
 
       const transcribedText = transcriptionResponse.data.text;
-      console.log('✅ Transcription successful:', transcribedText);
 
       // Step 2: Add user message to chat
       const userMessage: ConversationMessage = {
@@ -78,7 +71,6 @@ export default function PracticePage() {
       setMessages((prev) => [...prev, loadingMessage]);
 
       // Step 4: Get AI feedback
-      console.log('🤖 Step 2: Getting AI feedback...');
       const aiResponse = await generateConversation(
         transcribedText,
         conversationHistory,
@@ -100,8 +92,6 @@ Keep your responses concise (2-4 sentences) and conversational. Don't be overly 
         throw new Error(aiResponse.error?.message || 'Failed to get AI response');
       }
 
-      console.log('✅ AI response received:', aiResponse.data.text);
-
       // Step 5: Replace loading message with actual response
       setMessages((prev) =>
         prev.map((msg) =>
@@ -121,10 +111,7 @@ Keep your responses concise (2-4 sentences) and conversational. Don't be overly 
         ...updatedHistory,
         { role: 'assistant', content: aiResponse.data.text },
       ]);
-
-      console.log('✅ Conversation updated successfully');
     } catch (err) {
-      console.error('❌ Error during processing:', err);
       setError(
         err instanceof Error
           ? err.message
@@ -146,16 +133,6 @@ Keep your responses concise (2-4 sentences) and conversational. Don't be overly 
         <p className="mt-2 text-gray-600">
           Have a conversation with your AI teacher and improve your English
         </p>
-      </div>
-
-      {/* Debug Info */}
-      <div className="mx-4 mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-xs font-mono">
-        <div className="font-semibold mb-2">Debug Info:</div>
-        <div>Total messages: {messages.length}</div>
-        <div>Conversation history length: {conversationHistory.length}</div>
-        <div>Is processing: {isProcessing ? 'Yes' : 'No'}</div>
-        <div>Has error: {error ? 'Yes' : 'No'}</div>
-        {error && <div className="text-red-600 mt-1">Error: {error}</div>}
       </div>
 
       {/* Error Message */}

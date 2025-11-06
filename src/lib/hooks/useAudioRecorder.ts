@@ -77,8 +77,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
 
-      console.log('Using mime type:', mimeType || 'default');
-
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -89,7 +87,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: mimeType || 'audio/webm',
         });
-        console.log('Recording stopped, blob size:', audioBlob.size);
         setRecordingState((prev) => ({
           ...prev,
           isRecording: false,
@@ -109,8 +106,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       startTimeRef.current = Date.now();
       pausedTimeRef.current = 0;
 
-      console.log('Recording started successfully');
-
       setRecordingState({
         isRecording: true,
         isPaused: false,
@@ -123,7 +118,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to start recording';
       setError(errorMessage);
-      console.error('Recording error:', err);
     }
   }, [isSupported, updateDuration]);
 
