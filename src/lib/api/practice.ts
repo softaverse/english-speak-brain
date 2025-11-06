@@ -144,19 +144,10 @@ export interface ChatMessage {
 }
 
 /**
- * Text generation options for Responses API
+ * Text generation options for talkWithSpecificTopic API
  */
 export interface TextGenerationOptions {
-  temperature?: number;
-  maxOutputTokens?: number;
-  instructions?: string;
-  previousResponseId?: string;
   store?: boolean;
-  tools?: Array<any>;
-  toolChoice?: string | object;
-  parallelToolCalls?: boolean;
-  safetyIdentifier?: string;
-  metadata?: Record<string, string>;
   include?: Array<string>;
 }
 
@@ -180,50 +171,32 @@ export interface TextGenerationResponse {
 }
 
 /**
- * Generate conversation response using OpenAI Responses API
- * POST /api/practice/generate/conversation
+ * Talk with specific topic using reusable OpenAI prompt
+ * POST /api/practice/generate/talk-with-topic
  *
- * @param message - The user's message
- * @param history - Previous messages in the conversation (optional)
+ * @param topic - The conversation topic/scenario
+ * @param initial_message - The initial message in the conversation
  * @param options - Optional generation settings
  * @returns AI-generated conversation response
  *
  * @example
  * ```typescript
- * const response = await generateConversation(
- *   "Hello, how are you?",
- *   [
- *     { role: 'user', content: 'Hi there!' },
- *     { role: 'assistant', content: 'Hello! How can I help you?' }
- *   ],
- *   { temperature: 0.8, maxOutputTokens: 300 }
+ * const response = await talkWithSpecificTopic(
+ *   "You are attending a job interview. The interviewer asks you to describe yourself.",
+ *   "Hello, nice to meet you",
+ *   { store: true }
  * );
  * ```
  */
-export async function generateConversation(
-  message: string,
-  history?: ChatMessage[],
+export async function talkWithSpecificTopic(
+  topic: string,
+  initial_message: string,
   options?: TextGenerationOptions
 ): Promise<ApiResponse<TextGenerationResponse>> {
-  return apiClient.post('/practice/generate/conversation', {
-    message,
-    history: history || [],
+  return apiClient.post('/practice/generate/talk-with-topic', {
+    topic,
+    initial_message,
     options,
   });
-}
-
-/**
- * Analyze English text for errors and improvements
- * POST /api/practice/generate/analyze
- *
- * @param text - The text to analyze
- * @param options - Optional generation settings
- * @returns AI analysis with feedback
- */
-export async function analyzeText(
-  text: string,
-  options?: TextGenerationOptions
-): Promise<ApiResponse<TextGenerationResponse>> {
-  return apiClient.post('/practice/generate/analyze', { text, options });
 }
 
