@@ -74,7 +74,7 @@ export default function VoiceRecorder({
         await onAnalysisRequest(recordingState.audioBlob);
       } catch (err) {
         // Set user-friendly error message
-        const errorMessage = err instanceof Error ? err.message : '分析失敗，請重試';
+        const errorMessage = err instanceof Error ? err.message : 'Analysis failed. Please try again.';
         setAnalysisError(errorMessage);
       } finally {
         setIsAnalyzing(false);

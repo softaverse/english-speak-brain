@@ -20,11 +20,9 @@ export default function PracticePage() {
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([
     { role: 'assistant', content: INITIAL_MESSAGE.content },
   ]);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
-    setIsProcessing(true);
     setError(null);
 
     try {
@@ -120,8 +118,6 @@ Keep your responses concise (2-4 sentences) and conversational. Don't be overly 
 
       // Remove loading message if there was an error
       setMessages((prev) => prev.filter((msg) => !msg.isLoading));
-    } finally {
-      setIsProcessing(false);
     }
   };
 
