@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import VoiceRecorder from './VoiceRecorder';
 import ChatMessageList from './ChatMessageList';
-import { transcribeAudio, generateConversation } from '@/lib/api';
+import { transcribeAudio, talkWithSpecificTopic } from '@/lib/api';
 import type { ConversationMessage } from '@/types';
-import type { ChatMessage } from '@/lib/api/practice';
+
+// Conversation topic for the practice session
+const CONVERSATION_TOPIC = `You are attending a job interview. The interviewer asks you to describe yourself in three words and explain why you chose them, as well as provide a specific example. Try to answer clearly and effectively to leave a strong and positive impression.`;
 
 // Initial welcome message from AI teacher
 const INITIAL_MESSAGE: ConversationMessage = {
@@ -17,9 +19,6 @@ const INITIAL_MESSAGE: ConversationMessage = {
 
 export default function PracticePage() {
   const [messages, setMessages] = useState<ConversationMessage[]>([INITIAL_MESSAGE]);
-  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([
-    { role: 'assistant', content: INITIAL_MESSAGE.content },
-  ]);
   const [error, setError] = useState<string | null>(null);
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
@@ -51,12 +50,6 @@ export default function PracticePage() {
 
       setMessages((prev) => [...prev, userMessage]);
 
-      // Update conversation history for API
-      const updatedHistory: ChatMessage[] = [
-        ...conversationHistory,
-        { role: 'user', content: transcribedText },
-      ];
-
       // Step 3: Add loading message for AI response
       const loadingMessage: ConversationMessage = {
         id: `assistant-${crypto.randomUUID()}`,
@@ -68,21 +61,12 @@ export default function PracticePage() {
 
       setMessages((prev) => [...prev, loadingMessage]);
 
-      // Step 4: Get AI feedback
-      const aiResponse = await generateConversation(
+      // Step 4: Get AI response using talkWithSpecificTopic
+      const aiResponse = await talkWithSpecificTopic(
+        CONVERSATION_TOPIC,
         transcribedText,
-        conversationHistory,
         {
-          temperature: 0.8,
-          maxOutputTokens: 500,
-          instructions: `You are a friendly and supportive English teacher. Your role is to:
-1. Engage in natural conversation with the student
-2. Provide gentle corrections when you notice errors in grammar, vocabulary, or sentence structure
-3. Give encouraging feedback and praise improvements
-4. Ask follow-up questions to keep the conversation flowing
-5. Balance between being a conversational partner and an educational guide
-
-Keep your responses concise (2-4 sentences) and conversational. Don't be overly formal or list-like unless the student specifically asks for detailed analysis.`,
+          store: true,
         }
       );
 
@@ -103,12 +87,6 @@ Keep your responses concise (2-4 sentences) and conversational. Don't be overly 
             : msg
         )
       );
-
-      // Update conversation history
-      setConversationHistory([
-        ...updatedHistory,
-        { role: 'assistant', content: aiResponse.data.text },
-      ]);
     } catch (err) {
       setError(
         err instanceof Error
@@ -146,8 +124,40 @@ Keep your responses concise (2-4 sentences) and conversational. Don't be overly 
       )}
 
       {/* Chat Messages */}
-      <div className="flex-1 border border-gray-200 rounded-lg bg-white shadow-sm mx-4 overflow-hidden">
-        <ChatMessageList messages={messages} />
+      <div className="flex-1 border border-gray-200 rounded-lg bg-white shadow-sm mx-4 overflow-hidden flex flex-col">
+        {/* Topic Header */}
+        <div className="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-primary-200 px-6 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg
+                className="w-5 h-5 text-primary-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-primary-900 mb-1">
+                Conversation Topic
+              </h3>
+              <p className="text-sm text-primary-700 leading-relaxed">
+                {CONVERSATION_TOPIC}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages List */}
+        <div className="flex-1 overflow-hidden">
+          <ChatMessageList messages={messages} />
+        </div>
       </div>
 
       {/* Voice Recorder - Fixed at bottom */}
