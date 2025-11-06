@@ -38,36 +38,30 @@ export default function VoiceRecorder({
   }, []);
 
   const handleStartClick = async () => {
-    console.log('🎤 Start button clicked!');
     setHasAutoSubmitted(false); // Reset auto-submit flag
     setAnalysisError(null); // Clear any previous analysis errors
     try {
       await startRecording();
-      console.log('✅ Recording started successfully');
     } catch (err) {
-      console.error('❌ Failed to start recording:', err);
+      // Error is handled by useAudioRecorder hook
     }
   };
 
   const handleStopClick = async () => {
-    console.log('⏹️ Stop button clicked - will auto-submit');
     await stopRecording();
     // Note: Auto-submit happens in useEffect when audioBlob is created
   };
 
   const handleCancelClick = () => {
-    console.log('❌ Cancel button clicked - discarding recording');
     setHasAutoSubmitted(false); // Reset auto-submit flag
     resetRecording(); // This will stop recording and clear all data without creating an audioBlob
   };
 
   const handleSubmitClick = useCallback(async () => {
     if (!recordingState.audioBlob) {
-      console.warn('No audio blob to submit');
       return;
     }
 
-    console.log('📤 Submitting recording, blob size:', recordingState.audioBlob.size);
     setAnalysisError(null); // Clear any previous errors
 
     if (onRecordingComplete) {
@@ -78,9 +72,7 @@ export default function VoiceRecorder({
       setIsAnalyzing(true);
       try {
         await onAnalysisRequest(recordingState.audioBlob);
-        console.log('✅ Analysis complete, resetting to initial state');
       } catch (err) {
-        console.error('❌ Analysis failed:', err);
         // Set user-friendly error message
         const errorMessage = err instanceof Error ? err.message : '分析失敗，請重試';
         setAnalysisError(errorMessage);
@@ -104,7 +96,6 @@ export default function VoiceRecorder({
       !hasAutoSubmitted;
 
     if (shouldAutoSubmit) {
-      console.log('🚀 Auto-submitting recording for transcription');
       setHasAutoSubmitted(true);
       handleSubmitClick();
     }
@@ -141,21 +132,6 @@ export default function VoiceRecorder({
   return (
     <Card variant="elevated">
       <CardContent className="space-y-6 py-8">
-        {/* Debug Info */}
-        <div className="rounded-lg bg-gray-100 p-4 text-xs font-mono">
-          <div className="space-y-1">
-            <div>Mounted: {isMounted ? '✓' : '✗'}</div>
-            <div>Supported: {isSupported ? '✓' : '✗'}</div>
-            <div>Recording: {recordingState.isRecording ? '✓' : '✗'}</div>
-            <div>Paused: {recordingState.isPaused ? '✓' : '✗'}</div>
-            <div>Has Audio: {recordingState.audioBlob ? '✓' : '✗'}</div>
-            <div>Duration: {recordingState.duration.toFixed(2)}s</div>
-            {recordingState.audioBlob && (
-              <div>Blob Size: {recordingState.audioBlob.size} bytes</div>
-            )}
-          </div>
-        </div>
-
         {/* Recording Status */}
         <div className="text-center">
           {isAnalyzing ? (
