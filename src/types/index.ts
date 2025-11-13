@@ -234,3 +234,10 @@ export interface ConversationMessage {
   timestamp: Date;
   isLoading?: boolean;
 }
+
+export interface TopicPreset {
+  id: string;
+  name: string;
+  topic: string;
+  initialMessage: string;
+}

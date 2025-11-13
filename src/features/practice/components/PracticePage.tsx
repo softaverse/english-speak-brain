@@ -1,43 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import VoiceRecorder from './VoiceRecorder';
 import ChatMessageList from './ChatMessageList';
 import TopicConfigurationPanel from './TopicConfigurationPanel';
 import { transcribeAudio, talkWithSpecificTopic } from '@/lib/api';
-import type { ConversationMessage } from '@/types';
-
-// Define conversation topic presets
-interface TopicPreset {
-  id: string;
-  name: string;
-  topic: string;
-  initialMessage: string;
-}
-
-// Default preset for initial conversation
-const DEFAULT_PRESET: TopicPreset = {
-  id: 'job-interview',
-  name: 'Job Interview',
-  topic: `You are attending a job interview. The interviewer asks you to describe yourself in three words and explain why you chose them, as well as provide a specific example. Try to answer clearly and effectively to leave a strong and positive impression.`,
-  initialMessage: `Hello, thanks for coming in today. Let's start with a simple question. Can you describe yourself in three words?`,
-};
-
-const TOPIC_PRESETS: TopicPreset[] = [
-  DEFAULT_PRESET,
-  {
-    id: 'casual-chat',
-    name: 'Casual Chat',
-    topic: `You are having a casual conversation with a friendly English speaker. They want to get to know you better and practice everyday conversation topics like hobbies, interests, and daily life.`,
-    initialMessage: `Hey there! Nice to meet you. I'd love to get to know you better. What do you like to do in your free time?`,
-  },
-  {
-    id: 'travel-planning',
-    name: 'Travel Planning',
-    topic: `You are discussing travel plans with a travel advisor. They will help you plan your trip by asking about your preferences, budget, and interests. Practice expressing your travel desires and asking relevant questions.`,
-    initialMessage: `Hello! I'm here to help you plan your next adventure. Where would you like to go, and what kind of experience are you looking for?`,
-  },
-];
+import { DEFAULT_PRESET, TOPIC_PRESETS } from '@/features/practice/constants/topics';
+import type { ConversationMessage, TopicPreset } from '@/types';
 
 export default function PracticePage() {
   // Topic and message configuration
@@ -51,7 +21,7 @@ export default function PracticePage() {
   // Chat state - use lazy initializer to ensure unique ID on mount
   const [messages, setMessages] = useState<ConversationMessage[]>(() => [
     {
-      id: `assistant-${crypto.randomUUID()}`,
+      id: `assistant-${uuidv4()}`,
       role: 'assistant',
       content: DEFAULT_PRESET.initialMessage,
       timestamp: new Date(),
@@ -63,7 +33,7 @@ export default function PracticePage() {
   const resetConversation = useCallback((newInitialMessage: string) => {
     setMessages([
       {
-        id: `assistant-${crypto.randomUUID()}`,
+        id: `assistant-${uuidv4()}`,
         role: 'assistant',
         content: newInitialMessage,
         timestamp: new Date(),
@@ -111,7 +81,7 @@ export default function PracticePage() {
 
       // Step 2: Add user message to chat
       const userMessage: ConversationMessage = {
-        id: `user-${crypto.randomUUID()}`,
+        id: `user-${uuidv4()}`,
         role: 'user',
         content: transcribedText,
         audioBlob: audioBlob,
@@ -122,7 +92,7 @@ export default function PracticePage() {
 
       // Step 3: Add loading message for AI response
       const loadingMessage: ConversationMessage = {
-        id: `assistant-${crypto.randomUUID()}`,
+        id: `assistant-${uuidv4()}`,
         role: 'assistant',
         content: '',
         timestamp: new Date(),

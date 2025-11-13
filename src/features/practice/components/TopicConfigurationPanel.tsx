@@ -1,11 +1,6 @@
 'use client';
 
-interface TopicPreset {
-  id: string;
-  name: string;
-  topic: string;
-  initialMessage: string;
-}
+import type { TopicPreset } from '@/types';
 
 interface TopicConfigurationPanelProps {
   presets: TopicPreset[];
