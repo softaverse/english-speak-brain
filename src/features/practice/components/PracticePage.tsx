@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import VoiceRecorder from './VoiceRecorder';
 import ChatMessageList from './ChatMessageList';
 import { transcribeAudio, talkWithSpecificTopic } from '@/lib/api';
@@ -36,9 +36,11 @@ const TOPIC_PRESETS: TopicPreset[] = [
 ];
 
 export default function PracticePage() {
+  // Use a constant for the initial preset to avoid repetition
+  const initialPreset = TOPIC_PRESETS[0];
+
   // Topic and message configuration
-  const [conversationTopic, setConversationTopic] = useState<string>(TOPIC_PRESETS[0].topic);
-  const [initialMessage, setInitialMessage] = useState<string>(TOPIC_PRESETS[0].initialMessage);
+  const [conversationTopic, setConversationTopic] = useState<string>(initialPreset.topic);
   const [showConfig, setShowConfig] = useState<boolean>(false);
 
   // Custom input fields
@@ -50,32 +52,14 @@ export default function PracticePage() {
     {
       id: 'welcome-msg',
       role: 'assistant',
-      content: TOPIC_PRESETS[0].initialMessage,
+      content: initialPreset.initialMessage,
       timestamp: new Date(),
     }
   ]);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle preset selection
-  const handlePresetSelect = (preset: TopicPreset) => {
-    setConversationTopic(preset.topic);
-    setInitialMessage(preset.initialMessage);
-    resetConversation(preset.initialMessage);
-    setShowConfig(false);
-  };
-
-  // Handle custom topic submission
-  const handleCustomSubmit = () => {
-    if (customTopic.trim() && customInitialMessage.trim()) {
-      setConversationTopic(customTopic);
-      setInitialMessage(customInitialMessage);
-      resetConversation(customInitialMessage);
-      setShowConfig(false);
-    }
-  };
-
   // Reset conversation with new initial message
-  const resetConversation = (newInitialMessage: string) => {
+  const resetConversation = useCallback((newInitialMessage: string) => {
     setMessages([
       {
         id: 'welcome-msg',
@@ -84,7 +68,25 @@ export default function PracticePage() {
         timestamp: new Date(),
       }
     ]);
-  };
+  }, []);
+
+  // Handle preset selection
+  const handlePresetSelect = useCallback((preset: TopicPreset) => {
+    setConversationTopic(preset.topic);
+    resetConversation(preset.initialMessage);
+    setShowConfig(false);
+    setCustomTopic('');
+    setCustomInitialMessage('');
+  }, [resetConversation]);
+
+  // Handle custom topic submission
+  const handleCustomSubmit = useCallback(() => {
+    if (customTopic.trim() && customInitialMessage.trim()) {
+      setConversationTopic(customTopic);
+      resetConversation(customInitialMessage);
+      setShowConfig(false);
+    }
+  }, [customTopic, customInitialMessage, resetConversation]);
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
     setError(null);
