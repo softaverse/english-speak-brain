@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import VoiceRecorder from './VoiceRecorder';
 import ChatMessageList from './ChatMessageList';
+import TopicConfigurationPanel from './TopicConfigurationPanel';
 import { transcribeAudio, talkWithSpecificTopic } from '@/lib/api';
 import type { ConversationMessage } from '@/types';
 
@@ -14,13 +15,16 @@ interface TopicPreset {
   initialMessage: string;
 }
 
+// Default preset for initial conversation
+const DEFAULT_PRESET: TopicPreset = {
+  id: 'job-interview',
+  name: 'Job Interview',
+  topic: `You are attending a job interview. The interviewer asks you to describe yourself in three words and explain why you chose them, as well as provide a specific example. Try to answer clearly and effectively to leave a strong and positive impression.`,
+  initialMessage: `Hello, thanks for coming in today. Let's start with a simple question. Can you describe yourself in three words?`,
+};
+
 const TOPIC_PRESETS: TopicPreset[] = [
-  {
-    id: 'job-interview',
-    name: 'Job Interview',
-    topic: `You are attending a job interview. The interviewer asks you to describe yourself in three words and explain why you chose them, as well as provide a specific example. Try to answer clearly and effectively to leave a strong and positive impression.`,
-    initialMessage: `Hello, thanks for coming in today. Let's start with a simple question. Can you describe yourself in three words?`,
-  },
+  DEFAULT_PRESET,
   {
     id: 'casual-chat',
     name: 'Casual Chat',
@@ -36,23 +40,20 @@ const TOPIC_PRESETS: TopicPreset[] = [
 ];
 
 export default function PracticePage() {
-  // Use a constant for the initial preset to avoid repetition
-  const initialPreset = TOPIC_PRESETS[0];
-
   // Topic and message configuration
-  const [conversationTopic, setConversationTopic] = useState<string>(initialPreset.topic);
+  const [conversationTopic, setConversationTopic] = useState<string>(DEFAULT_PRESET.topic);
   const [showConfig, setShowConfig] = useState<boolean>(false);
 
   // Custom input fields
   const [customTopic, setCustomTopic] = useState<string>('');
   const [customInitialMessage, setCustomInitialMessage] = useState<string>('');
 
-  // Chat state
-  const [messages, setMessages] = useState<ConversationMessage[]>([
+  // Chat state - use lazy initializer to ensure unique ID on mount
+  const [messages, setMessages] = useState<ConversationMessage[]>(() => [
     {
-      id: 'welcome-msg',
+      id: `assistant-${crypto.randomUUID()}`,
       role: 'assistant',
-      content: initialPreset.initialMessage,
+      content: DEFAULT_PRESET.initialMessage,
       timestamp: new Date(),
     }
   ]);
@@ -62,7 +63,7 @@ export default function PracticePage() {
   const resetConversation = useCallback((newInitialMessage: string) => {
     setMessages([
       {
-        id: 'welcome-msg',
+        id: `assistant-${crypto.randomUUID()}`,
         role: 'assistant',
         content: newInitialMessage,
         timestamp: new Date(),
@@ -85,6 +86,8 @@ export default function PracticePage() {
       setConversationTopic(customTopic);
       resetConversation(customInitialMessage);
       setShowConfig(false);
+      setCustomTopic('');
+      setCustomInitialMessage('');
     }
   }, [customTopic, customInitialMessage, resetConversation]);
 
@@ -186,68 +189,15 @@ export default function PracticePage() {
 
       {/* Configuration Panel */}
       {showConfig && (
-        <div className="mx-4 mb-4 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Configure Conversation Topic</h2>
-
-          {/* Preset Topics */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Select Presets</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {TOPIC_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  onClick={() => handlePresetSelect(preset)}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-gray-50 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-300 rounded-lg border border-gray-200 transition-colors"
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Custom Topic Input */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Or Create Custom Topic</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="custom-topic" className="block text-sm font-medium text-gray-700 mb-2">
-                  Conversation Topic Description
-                </label>
-                <textarea
-                  id="custom-topic"
-                  value={customTopic}
-                  onChange={(e) => setCustomTopic(e.target.value)}
-                  placeholder="Describe the conversation scenario and context..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="custom-message" className="block text-sm font-medium text-gray-700 mb-2">
-                  Initial AI Message
-                </label>
-                <textarea
-                  id="custom-message"
-                  value={customInitialMessage}
-                  onChange={(e) => setCustomInitialMessage(e.target.value)}
-                  placeholder="Enter the AI's opening message to start the conversation..."
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                />
-              </div>
-
-              <button
-                onClick={handleCustomSubmit}
-                disabled={!customTopic.trim() || !customInitialMessage.trim()}
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors"
-              >
-                Start Custom Conversation
-              </button>
-            </div>
-          </div>
-        </div>
+        <TopicConfigurationPanel
+          presets={TOPIC_PRESETS}
+          customTopic={customTopic}
+          customInitialMessage={customInitialMessage}
+          onCustomTopicChange={setCustomTopic}
+          onCustomInitialMessageChange={setCustomInitialMessage}
+          onPresetSelect={handlePresetSelect}
+          onCustomSubmit={handleCustomSubmit}
+        />
       )}
 
       {/* Error Message */}
