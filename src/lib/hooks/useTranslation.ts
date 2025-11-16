@@ -26,6 +26,11 @@ export function useTranslation(text: string, targetLanguage: string = DEFAULT_TA
    * Toggle translation visibility or fetch translation if not already cached
    */
   const toggleTranslation = useCallback(async () => {
+    // Don't attempt to translate empty or whitespace-only strings
+    if (!text?.trim()) {
+      return;
+    }
+
     // If translation already exists, just toggle visibility
     if (translation) {
       setShowTranslation((prev) => !prev);
