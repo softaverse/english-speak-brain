@@ -1,53 +1,26 @@
 'use client';
 
-import { useState } from 'react';
 import { GraduationCap, Loader2, Languages } from 'lucide-react';
 import type { ConversationMessage } from '@/types';
-import { translateText } from '@/lib/api';
+import { useTranslation } from '@/lib/hooks';
 
 interface AssistantMessageProps {
   message: ConversationMessage;
 }
 
 export default function AssistantMessage({ message }: AssistantMessageProps) {
-  const [translation, setTranslation] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(false);
-  const [translationError, setTranslationError] = useState<string | null>(null);
+  const {
+    translation,
+    isTranslating,
+    showTranslation,
+    error: translationError,
+    toggleTranslation,
+  } = useTranslation(message.content);
 
   const formattedTime = new Date(message.timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
-
-  const handleTranslate = async () => {
-    // If translation already exists, just toggle visibility
-    if (translation) {
-      setShowTranslation(!showTranslation);
-      return;
-    }
-
-    // Otherwise, fetch the translation
-    setIsTranslating(true);
-    setTranslationError(null);
-
-    try {
-      const response = await translateText(message.content, 'zh-TW');
-
-      if (!response.success || !response.data?.translatedText) {
-        throw new Error(response.error?.message || 'Translation failed');
-      }
-
-      setTranslation(response.data.translatedText);
-      setShowTranslation(true);
-    } catch (error) {
-      setTranslationError(
-        error instanceof Error ? error.message : 'Failed to translate'
-      );
-    } finally {
-      setIsTranslating(false);
-    }
-  };
 
   return (
     <div className="flex justify-start gap-3 mb-4">
@@ -93,7 +66,7 @@ export default function AssistantMessage({ message }: AssistantMessageProps) {
               {/* Translation Button */}
               <div className="mt-2 flex items-center">
                 <button
-                  onClick={handleTranslate}
+                  onClick={toggleTranslation}
                   disabled={isTranslating}
                   className="flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title={translation ? (showTranslation ? '隱藏翻譯' : '顯示翻譯') : '翻譯成中文'}

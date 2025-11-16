@@ -209,25 +209,27 @@ export interface TranslationResponse {
   targetLanguage: string;
 }
 
+// Note: We don't import DEFAULT_TARGET_LANGUAGE here to avoid circular dependencies
+// The default value should be passed from the caller (useTranslation hook)
 /**
- * Translate text from English to Chinese
+ * Translate text from English to target language
  * POST /api/practice/translate
  *
  * @param text - The text to translate
- * @param targetLanguage - The target language code (default: 'zh-CN' for Simplified Chinese)
+ * @param targetLanguage - The target language code
  * @returns Translated text
  *
  * @example
  * ```typescript
  * const response = await translateText(
  *   "Hello, how are you?",
- *   "zh-CN"
+ *   "zh-TW"
  * );
  * ```
  */
 export async function translateText(
   text: string,
-  targetLanguage: string = 'zh-CN'
+  targetLanguage: string
 ): Promise<ApiResponse<TranslationResponse>> {
   return apiClient.post('/practice/translate', {
     text,
