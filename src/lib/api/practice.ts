@@ -200,3 +200,38 @@ export async function talkWithSpecificTopic(
   });
 }
 
+/**
+ * Translation response interface
+ */
+export interface TranslationResponse {
+  translatedText: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+/**
+ * Translate text from English to Chinese
+ * POST /api/practice/translate
+ *
+ * @param text - The text to translate
+ * @param targetLanguage - The target language code (default: 'zh-CN' for Simplified Chinese)
+ * @returns Translated text
+ *
+ * @example
+ * ```typescript
+ * const response = await translateText(
+ *   "Hello, how are you?",
+ *   "zh-CN"
+ * );
+ * ```
+ */
+export async function translateText(
+  text: string,
+  targetLanguage: string = 'zh-CN'
+): Promise<ApiResponse<TranslationResponse>> {
+  return apiClient.post('/practice/translate', {
+    text,
+    targetLanguage,
+  });
+}
+
