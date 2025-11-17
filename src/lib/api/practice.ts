@@ -237,3 +237,48 @@ export async function translateText(
   });
 }
 
+/**
+ * Response suggestions interface
+ */
+export interface ResponseSuggestionsResponse {
+  suggestions: string[];
+}
+
+/**
+ * Generate response suggestions for the current conversation
+ * POST /api/practice/generate/text
+ *
+ * @param topic - The conversation topic
+ * @param conversationHistory - Recent conversation messages
+ * @param options - Optional generation settings
+ * @returns Three suggested responses
+ *
+ * @example
+ * ```typescript
+ * const response = await generateResponseSuggestions(
+ *   "Job interview preparation",
+ *   "Teacher: Tell me about yourself.\nUser: I am a software engineer.",
+ *   { store: false }
+ * );
+ * ```
+ */
+export async function generateResponseSuggestions(
+  topic: string,
+  conversationHistory: string,
+  options?: TextGenerationOptions
+): Promise<ApiResponse<TextGenerationResponse>> {
+  const prompt = `Based on the following conversation topic and history, generate exactly 3 helpful response suggestions that the user could say next. Each suggestion should be a complete, natural sentence in English.
+
+Topic: ${topic}
+
+Conversation History:
+${conversationHistory}
+
+Provide 3 different response suggestions, separated by newlines. Each suggestion should be relevant, helpful, and conversational.`;
+
+  return apiClient.post('/practice/generate/text', {
+    prompt,
+    options,
+  });
+}
+
