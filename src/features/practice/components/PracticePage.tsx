@@ -85,18 +85,12 @@ export default function PracticePage() {
         { store: false }
       );
 
-      if (!response.success || !response.data?.text) {
+      if (!response.success || !response.data?.suggestions) {
         throw new Error(response.error?.message || 'Failed to generate suggestions');
       }
 
-      // Parse the suggestions (split by newlines and filter empty lines)
-      const parsedSuggestions = response.data.text
-        .split('\n')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0)
-        .slice(0, 3); // Ensure we only have 3 suggestions
-
-      setSuggestions(parsedSuggestions);
+      // Use the structured suggestions directly from the API
+      setSuggestions(response.data.suggestions);
       setShowSuggestions(true);
     } catch (err) {
       setError(
