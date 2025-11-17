@@ -1,8 +1,9 @@
 'use client';
 
-import { GraduationCap, Loader2, Languages } from 'lucide-react';
+import { GraduationCap, Loader2, Languages, Copy, Check } from 'lucide-react';
 import type { ConversationMessage } from '@/types';
 import { useTranslation } from '@/lib/hooks';
+import { useState } from 'react';
 
 interface AssistantMessageProps {
   message: ConversationMessage;
@@ -17,10 +18,22 @@ export default function AssistantMessage({ message }: AssistantMessageProps) {
     toggleTranslation,
   } = useTranslation(message.content);
 
+  const [isCopied, setIsCopied] = useState(false);
+
   const formattedTime = new Date(message.timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
 
   return (
     <div className="flex justify-start gap-3 mb-4">
@@ -63,8 +76,9 @@ export default function AssistantMessage({ message }: AssistantMessageProps) {
                 </div>
               )}
 
-              {/* Translation Button */}
-              <div className="mt-2 flex items-center">
+              {/* Action Buttons */}
+              <div className="mt-2 flex items-center gap-3">
+                {/* Translation Button */}
                 <button
                   onClick={toggleTranslation}
                   disabled={isTranslating}
@@ -80,6 +94,25 @@ export default function AssistantMessage({ message }: AssistantMessageProps) {
                     <>
                       <Languages className="w-3.5 h-3.5" />
                       <span>{translation ? (showTranslation ? '隱藏翻譯' : '顯示翻譯') : '翻譯'}</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Copy Button */}
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors"
+                  title={isCopied ? '已複製！' : '複製文字'}
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-green-600" />
+                      <span className="text-green-600">已複製</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>複製</span>
                     </>
                   )}
                 </button>
