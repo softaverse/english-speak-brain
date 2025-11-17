@@ -317,11 +317,10 @@ export default function PracticePage() {
               </button>
             </div>
             <div className="space-y-2">
-              {suggestions.map((suggestion, index) => (
+              {suggestions.map((suggestion) => (
                 <SuggestionItem
-                  key={index}
+                  key={suggestion}
                   suggestion={suggestion}
-                  index={index}
                 />
               ))}
             </div>

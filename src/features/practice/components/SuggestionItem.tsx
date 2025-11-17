@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Languages, Copy, Check, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/lib/hooks';
 
 interface SuggestionItemProps {
   suggestion: string;
-  index: number;
 }
 
-export default function SuggestionItem({ suggestion, index }: SuggestionItemProps) {
+export default function SuggestionItem({ suggestion }: SuggestionItemProps) {
   const {
     translation,
     isTranslating,
@@ -20,11 +19,20 @@ export default function SuggestionItem({ suggestion, index }: SuggestionItemProp
 
   const [isCopied, setIsCopied] = useState(false);
 
+  useEffect(() => {
+    if (!isCopied) return;
+
+    const timerId = setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+
+    return () => clearTimeout(timerId);
+  }, [isCopied]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(suggestion);
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
     }
