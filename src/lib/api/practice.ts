@@ -237,3 +237,41 @@ export async function translateText(
   });
 }
 
+/**
+ * Response suggestions interface
+ */
+export interface ResponseSuggestionsResponse {
+  suggestions: string[];
+}
+
+/**
+ * Generate response suggestions for the current conversation
+ * POST /api/practice/generate/suggestions
+ *
+ * @param topic - The conversation topic
+ * @param conversationHistory - Recent conversation messages
+ * @param options - Optional generation settings
+ * @returns Three suggested responses in a structured format
+ *
+ * @example
+ * ```typescript
+ * const response = await generateResponseSuggestions(
+ *   "Job interview preparation",
+ *   "Teacher: Tell me about yourself.\nUser: I am a software engineer.",
+ *   { store: false }
+ * );
+ * // response.data.suggestions = ["I have 5 years...", "I specialize in...", "I'm passionate about..."]
+ * ```
+ */
+export async function generateResponseSuggestions(
+  topic: string,
+  conversationHistory: string,
+  options?: TextGenerationOptions
+): Promise<ApiResponse<ResponseSuggestionsResponse>> {
+  return apiClient.post('/practice/generate/suggestions', {
+    topic,
+    conversationHistory,
+    options,
+  });
+}
+

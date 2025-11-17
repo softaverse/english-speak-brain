@@ -5,7 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import VoiceRecorder from './VoiceRecorder';
 import ChatMessageList from './ChatMessageList';
 import TopicConfigurationPanel from './TopicConfigurationPanel';
-import { transcribeAudio, talkWithSpecificTopic } from '@/lib/api';
+import SuggestionItem from './SuggestionItem';
+import { transcribeAudio, talkWithSpecificTopic, generateResponseSuggestions } from '@/lib/api';
 import { DEFAULT_PRESET, TOPIC_PRESETS } from '@/features/practice/constants/topics';
 import type { ConversationMessage, TopicPreset } from '@/types';
 
@@ -28,6 +29,11 @@ export default function PracticePage() {
     }
   ]);
   const [error, setError] = useState<string | null>(null);
+
+  // Response suggestions state
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(false);
 
   // Reset conversation with new initial message
   const resetConversation = useCallback((newInitialMessage: string) => {
@@ -60,6 +66,42 @@ export default function PracticePage() {
       setCustomInitialMessage('');
     }
   }, [customTopic, customInitialMessage, resetConversation]);
+
+  // Handle generating response suggestions
+  const handleGenerateSuggestions = useCallback(async () => {
+    setLoadingSuggestions(true);
+    setError(null);
+
+    try {
+      // Build conversation history from recent messages
+      const conversationHistory = messages
+        .slice(-6) // Get last 6 messages for context
+        .map((msg) => `${msg.role === 'user' ? 'User' : 'Teacher'}: ${msg.content}`)
+        .join('\n');
+
+      const response = await generateResponseSuggestions(
+        conversationTopic,
+        conversationHistory,
+        { store: false }
+      );
+
+      if (!response.success || !response.data?.suggestions) {
+        throw new Error(response.error?.message || 'Failed to generate suggestions');
+      }
+
+      // Use the structured suggestions directly from the API
+      setSuggestions(response.data.suggestions);
+      setShowSuggestions(true);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to generate suggestions. Please try again.'
+      );
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }, [conversationTopic, messages]);
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
     setError(null);
@@ -219,6 +261,65 @@ export default function PracticePage() {
         <div className="flex-1 overflow-hidden">
           <ChatMessageList messages={messages} />
         </div>
+      </div>
+
+      {/* Response Suggestions Button and Panel */}
+      <div className="mt-4 mx-4">
+        <button
+          onClick={handleGenerateSuggestions}
+          disabled={loadingSuggestions}
+          className="w-full px-4 py-3 text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg border border-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+            />
+          </svg>
+          {loadingSuggestions ? '生成中...' : '提示'}
+        </button>
+
+        {/* Suggestions Popup */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="mt-3 p-4 bg-white border border-primary-200 rounded-lg shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">回應建議</h3>
+              <button
+                onClick={() => setShowSuggestions(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-2">
+              {suggestions.map((suggestion, index) => (
+                <SuggestionItem
+                  key={index}
+                  suggestion={suggestion}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Voice Recorder - Fixed at bottom */}
